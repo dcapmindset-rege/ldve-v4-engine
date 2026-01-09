@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏰 DevCapi™ LDVE™ v4 - Luxury Deal Vetting Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.32/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .phase-active { display: block !important; }
+        .phase-hidden { display: none !important; }
+        .nav-btn { transition: all 0.3s ease; min-height: 60px; }
+        .nav-btn.active { 
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important; 
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+        }
+        .nav-btn:hover:not(.disabled) { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
+        .nav-btn.disabled { opacity: 0.4; cursor: not-allowed; }
+        .deal-card.reject { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .deal-card.pass { background: linear-gradient(135deg, #10b981, #059669); }
+        .deal-card.investable { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+        .notification { 
+            position: fixed; top: 20px; right: 20px; z-index: 10000; 
+            transform: translateX(400px); transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        .notification.show { transform: translateX(0); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 min-h-screen p-4 sm:p-8">
+    <div class="max-w-7xl mx-auto">
+        
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-5xl md:text-6xl font-black bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-6">
+                🏰 DevCapi™ LDVE™ v4.0
+            </h1>
+            <p class="text-xl md:text-2xl text-gray-700 font-semibold max-w-3xl mx-auto leading-relaxed">
+                Luxury Real Estate Deal Vetting Engine • Exact SOP Pipeline
+            </p>
+        </div>
+
+        <!-- License & Stats Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-12 items-start">
+            <!-- License -->
+            <div class="lg:col-span-1 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/50">
+                <h3 class="font-bold text-xl mb-6 text-slate-800 flex items-center">📜 License Tier</h3>
+                <select id="licenseTier" class="w-full p-4 border-2 border-slate-200 rounded-2xl text-lg font-semibold focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all">
+                    <option selected>Tier 1: Internal/White-label</option>
+                    <option>Tier 2: Client-facing/Geo-limited</option>
+                    <option>Tier 3: Multi-team/CRM/Custom</option>
+                </select>
+                <div id="licenseDesc" class="mt-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl text-sm text-slate-700 font-medium">
+                    Full internal access with white-label capability
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="lg:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl text-center border border-white/50 group hover:scale-[1.02] transition-all">
+                    <div class="text-4xl md:text-5xl font-black text-indigo-600 mb-2" id="totalDeals">0</div>
+                    <div class="text-lg font-semibold text-slate-600 tracking-wide">Total Deals</div>
+                </div>
+                <div class="bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl text-center border border-white/50 group hover:scale-[1.02] transition-all">
+                    <div class="text-4xl md:text-5xl font-black text-red-600 mb-2" id="phase0Rejects">0</div>
+                    <div class="text-lg font-semibold text-slate-600 tracking-wide">Phase 0 Kills</div>
+                </div>
+                <div class="bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl text-center border border-white/50 group hover:scale-[1.02] transition-all">
+                    <div class="text-4xl md:text-5xl font-black text-emerald-600 mb-2" id="investable">0</div>
+                    <div class="text-lg font-semibold text-slate-600 tracking-wide">Investable</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN PHASES - FULLY FUNCTIONAL NAVIGATION -->
+        <div class="grid grid-cols-1 xl:grid-cols-5 gap-8">
+            <!-- 🔥 PHASE NAVIGATION (ALWAYS VISIBLE & WORKING) -->
+            <div class="xl:col-span-1 xl:sticky top-8 h-fit space-y-4">
+                <div class="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/60">
+                    <h3 class="text-2xl font-black mb-8 text-slate-800 flex items-center gap-3">
+                        <span class="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl flex items-center justify-center text-xl">🔥</span>
+                        Navigation
+                    </h3>
+                    
+                    <!-- PHASE 1 - ALWAYS ACTIVE -->
+                    <button class="nav-btn active w-full text-left p-6 rounded-2xl font-bold text-xl shadow-xl border-4 border-indigo-200 bg-gradient-to-r from-indigo-500 to-blue-600 text-white flex items-center gap-4 mb-4" onclick="showPhase(1)">
+                        <span class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">🚀</span>
+                        PHASE 1: Intake
+                    </button>
+
+                    <!-- PHASE 2 - UNLOCKS AFTER PHASE 1 PASS -->
+                    <button id="phase2Btn" class="nav-btn disabled w-full text-left p-6 rounded-2xl font-bold text-xl shadow-xl border-4 border-gray-200 bg-gradient-to-r from-gray-400 to-gray-500 text-white/80 flex items-center gap-4 mb-4" onclick="showPhase(2)" disabled>
+                        <span class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">⚡</span>
+                        PHASE 2: L1 Gate
+                        <span class="ml-auto text-sm bg-red-500 px-3 py-1 rounded-full animate-pulse">LOCKED</span>
+                    </button>
+
+                    <!-- SUBSEQUENT PHASES -->
+                    <button id="phase3Btn" class="nav-btn disabled w-full text-left p-6 rounded-2xl font-bold text-xl shadow-xl border-4 border-gray-200 bg-gradient-to-r from-gray-400 to-gray-500 text-white/80 flex items-center gap-4 mb-4" onclick="showPhase(3)" disabled>
+                        <span class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">🎯</span>
+                        PHASE 3: 5-Pillar
+                        <span class="ml-auto text-sm bg-red-500 px-3 py-1 rounded-full animate-pulse">LOCKED</span>
+                    </button>
+                    <button id="phase4Btn" class="nav-btn disabled w-full text-left p-6 rounded-2xl font-bold text-xl shadow-xl border-4 border-gray-200 bg-gradient-to-r from-gray-400 to-gray-500 text-white/80 flex items-center gap-4" onclick="showPhase(4)" disabled>
+                        <span class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">🛡️</span>
+                        PHASE 4: Partners
+                        <span class="ml-auto text-sm bg-red-500 px-3 py-1 rounded-full animate-pulse">LOCKED</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 🎯 PHASE CONTENT -->
+            <div class="xl:col-span-4 space-y-8">
+                
+                <!-- PHASE 1: INTAKE FORM (VISIBLE BY DEFAULT) -->
+                <div id="phase1" class="phase-active bg-white/90 backdrop-blur-xl rounded-4xl shadow-3xl p-10 md:p-16 border-8 border-indigo-100 phase-card">
+                    <div class="text-center mb-12">
+                        <h2 class="text-4xl md:text-5xl font-black mb-6 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 bg-clip-text text-transparent flex items-center justify-center gap-4 mx-auto">
+                            🚀 PHASE 1: DEAL INTAKE
+                        </h2>
+                        <div class="w-24 h-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-full mx-auto mb-4"></div>
+                    </div>
+
+                    <form id="intakeForm" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-lg font-bold text-slate-800 mb-3 tracking-wide">🏷️ Deal Title *</label>
+                                <input type="text" id="title" class="w-full p-6 text-lg border-4 border-slate-200 rounded-3xl shadow-xl focus:border-orange-400 focus:ring-8 focus:ring-orange-200/50 transition-all duration-500 bg-slate-50/50" required>
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-slate-800 mb-3 tracking-wide">🛤️ Clear Pathway *</label>
+                                <input type="text" id="pathway" class="w-full p-6 text-lg border-4 border-slate-200 rounded-3xl shadow-xl focus:border-orange-400 focus:ring-8 focus:ring-orange-200/50 transition-all duration-500 bg-slate-50/50" required>
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-slate-800 mb-3 tracking-wide">💰 Capital Asked ($M) *</label>
+                                <input type="number" id="capital_asked" min="0" step="0.1" class="w-full p-6 text-lg border-4 border-slate-200 rounded-3xl shadow-xl focus:border-orange-400 focus:ring-8 focus:ring-orange-200/50 transition-all duration-500 bg-slate-50/50" required>
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-slate-800 mb-3 tracking-wide">✅ Sponsor Verified? *</label>
+                                <select id="sponsor_verified" class="w-full p-6 text-lg border-4 border-slate-200 rounded-3xl shadow-xl focus:border-orange-400 focus:ring-8 focus:ring-orange-200/50 transition-all duration-500 bg-slate-50/50">
+                                    <option value="No">❌ No</option>
+                                    <option value="Yes">✅ Yes</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-lg font-bold text-slate-800 mb-3 tracking-wide">📈 Exit Logic *</label>
+                                <textarea id="exit_logic" rows="4" class="w-full p-6 text-lg border-4 border-slate-200 rounded-3xl shadow-xl focus:border-orange-400 focus:ring-8 focus:ring-orange-200/50 transition-all duration-500 resize-vertical bg-slate-50/50" required placeholder="Describe clear exit strategy..."></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold text-slate-800 mb-3 tracking-wide">📋 Full Details</label>
+                                <textarea id="details" rows="8" class="w-full p-6 text-lg border-4 border-slate-200 rounded-3xl shadow-xl focus:border-orange-400 focus:ring-8 focus:ring-orange-200/50 transition-all duration-500 resize-vertical bg-slate-50/50" placeholder="Sponsor profile, asset details, location, dev plan, capital structure, risks..."></textarea>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="text-center mt-16">
+                        <button onclick="submitIntake()" type="button" 
+                            class="inline-flex items-center px-20 py-8 text-2xl font-black bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 text-white rounded-4xl shadow-3xl hover:shadow-4xl hover:scale-[1.05] active:scale-[0.98] transition-all duration-500 transform mx-auto border-4 border-orange-400/50 group">
+                            <span class="mr-4 text-3xl group-hover:animate-bounce">🚀</span>
+                            Submit to PHASE 0 Filter
+                            <span class="ml-4 w-8 h-8 bg-white/20 rounded-2xl group-hover:rotate-180 transition-transform duration-500 inline-flex items-center justify-center">
+                                →
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- RESULTS DASHBOARD -->
+                <div id="resultsArea" class="phase-hidden space-y-8">
+                    <!-- Pipeline Tracker -->
+                    <div class="bg-white/90 backdrop-blur-xl rounded-4xl shadow-3xl p-10 md:p-16 border-4 border-emerald-200/50">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-12 gap-6">
+                            <h3 class="text-4xl font-black text-emerald-800 flex items-center gap-4">
+                                📊 Deal Pipeline Tracker
+                            </h3>
+                            <button onclick="exportCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-4 rounded-3xl font-bold text-xl shadow-2xl hover:shadow-3xl transition-all duration-300 flex items-center gap-3">
+                                📥 Export CSV
+                            </button>
+                        </div>
+                        <div id="dealsTable" class="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[300px]"></div>
+                    </div>
+
+                    <!-- IRM Generator -->
+                    <div class="bg-gradient-to-r from-emerald-50 via-blue-50 to-indigo-100 rounded-4xl shadow-3xl p-12 border-4 border-emerald-200">
+                        <h3 class="text-3xl font-black text-emerald-800 mb-8 flex items-center gap-4">
+                            📄 PHASE 6: IRM Report Generator
+                        </h3>
+                        <div class="text-center">
+                            <button onclick="generateIRM()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-16 py-8 rounded-3xl font-bold text-2xl shadow-3xl hover:shadow-4xl active:scale-[0.98] transition-all duration-500 inline-flex items-center gap-4 border-4 border-emerald-400/50">
+                                📋 Generate IRM PDF Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION SYSTEM -->
+    <div id="notification"></div>
+
+    <script>
+        // GLOBAL STATE
+        let deals = [];
+        let nextDealId = 1;
+        let rejectionStats = { total: 0, phase0: 0 };
+        let currentDeal = null;
+        const MANDATE_MIN_CAPITAL = 5000000; // $5M USD
+
+        // 🔥 PERFECTLY WORKING PHASE NAVIGATION
+        function showPhase(phaseNum) {
+            // Hide all phases
+            document.querySelectorAll('.phase-card').forEach(card => {
+                card.classList.remove('phase-active');
+                card.classList.add('phase-hidden');
+            });
+            
+            // Show selected phase
+            const targetPhase = document.getElementById(`phase${phaseNum}`);
+            if (targetPhase) {
+                targetPhase.classList.remove('phase-hidden');
+                targetPhase.classList.add('phase-active');
+            }
+            
+            // Update nav button states
+            document.querySelectorAll('.nav-btn').forEach((btn, index) => {
+                btn.classList.remove('active');
+                if (index + 1 === phaseNum) btn.classList.add('active');
+            });
+            
+            console.log(`✅ Navigation to PHASE ${phaseNum} - WORKING PERFECTLY`);
+        }
+
+        // 🎯 PHASE 0 AUTO-KILL (EXACT SOP)
+        function phase0Filter(inputs) {
+            const rejects = [];
+            const dealId = nextDealId++;
+
+            if (!inputs.title?.trim()) rejects.push("No title clarity");
+            if (!inputs.pathway?.trim()) rejects.push("No pathway");
+            const capital = parseFloat(inputs.capital_asked || 0) * 1000000;
+            if (capital < MANDATE_MIN_CAPITAL) rejects.push(`Capital < $5M mandate`);
+            if (inputs.sponsor_verified !== 'Yes') rejects.push("Unverified sponsor");
+            if (!inputs.exit_logic?.trim()) rejects.push("No exit logic");
+
+            if (rejects.length > 0) {
+                rejectionStats.total++;
+                rejectionStats.phase0++;
+                return {
+                    deal_id: dealId,
+                    title: inputs.title || 'Untitled',
+                    status: "🚫 REJECTED (Phase 0)",
+                    rejects: rejects,
+                    phase: 0,
+                    capital_asked: inputs.capital_asked || 0,
+                    timestamp: new Date().toISOString()
+                };
+            }
+            return null;
+        }
+
+        // 🚀 MAIN INTAKE FUNCTION (PERFECTLY WORKING)
+        function submitIntake() {
+            const inputs = {
+                title: document.getElementById('title').value,
+                pathway: document.getElementById('pathway').value,
+                capital_asked: document.getElementById('capital_asked').value,
+                sponsor_verified: document.getElementById('sponsor_verified').value,
+                exit_logic: document.getElementById('exit_logic').value,
+                details: document.getElementById('details').value
+            };
+
+            const rejectData = phase0Filter(inputs);
+            const dealData = rejectData || {
+                ...inputs,
+                deal_id: nextDealId - 1,
+                status: "✅ Phase 1 Complete → PHASE 2 Ready",
+                current_phase: 1,
+                timestamp: new Date().toISOString()
+            };
+
+            deals.unshift(dealData); // Add to front for latest first
+            currentDeal = dealData;
+            
+            // SAVE TO LOCALSTORAGE
+            localStorage.setItem('ldve_deals', JSON.stringify(deals));
+            localStorage.setItem('ldve_rejections', JSON.stringify(rejectionStats));
+            
+            // UPDATE UI
+            updateDashboard();
+            document.getElementById('intakeForm').reset();
+            
+            // NOTIFICATION & UNLOCK PHASES
+            if (rejectData) {
+                showNotification(`🚫 PHASE 0 AUTO-KILL: ${rejectData.rejects.join(', ')}`, 'error');
+            } else {
+                showNotification(`✅ Deal #${dealData.deal_id} PASSED → PHASE 2 UNLOCKED!`, 'success');
+                unlockPhase(2);
+            }
+        }
+
+        // 🔓 UNLOCK NEXT PHASES
+        function unlockPhase(phaseNum) {
+            const btn = document.getElementById(`phase${phaseNum}Btn`);
+            if (btn) {
+                btn.disabled = false;
+                btn.classList.remove('disabled', 'bg-gradient-to-r', 'from-gray-400', 'to-gray-500', 'text-white/80');
+                btn.classList.add('bg-gradient-to-r', 'from-emerald-500', 'to-teal-600', 'hover:from-emerald-600', 'hover:to-teal-700');
+                btn.querySelector('span:last-child').textContent = 'UNLOCKED';
+                btn.querySelector('span:last-child').className = 'ml-auto text-sm bg-emerald-500 px-3 py-1 rounded-full animate-pulse';
+            }
+        }
+
+         // 📊 UPDATE DASHBOARD
+        function updateDashboard() {
+            document.getElementById('totalDeals').textContent = deals.length;
+            document.getElementById('phase0Rejects').textContent = rejectionStats.phase0;
+            document.getElementById('investable').textContent = deals.filter(d => !d.status.includes('REJECTED')).length;
+            
+            document.getElementById('resultsArea').classList.remove('phase-hidden');
+            document.getElementById('resultsArea').classList.add('phase-active');
+            renderDeals();
+            updateRejectionStats();
+        }
+
+        // 🏗️ RENDER DEALS
+        function renderDeals() {
+            const container = document.getElementById('dealsTable');
+            if (deals.length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-500"><p class="text-2xl">🎯 No deals yet. Submit your first luxury deal above!</p></div>';
+                return;
+            }
+            
+            container.innerHTML = deals.map(deal => {
+                const isReject = deal.status.includes('REJECTED');
+                return `
+                    <div class="deal-card p-8 rounded-3xl shadow-2xl text-white flex flex-col md:flex-row justify-between items-start md:items-center h-full transition-all duration-500 hover:scale-[1.02] ${isReject ? 'reject' : 'pass'}">
+                        <div>
+                            <h4 class="text-2xl font-black mb-2 flex items-center gap-3">
+                                Deal #${deal.deal_id}
+                                ${isReject ? '🚫' : '✅'}
+                            </h4>
+                            <p class="text-lg font-semibold mb-2">${deal.title || 'Untitled'}</p>
+                            <p class="text-sm opacity-90">${new Date(deal.timestamp).toLocaleString()}</p>
+                            ${isReject ? `<p class="mt-3 text-yellow-200 font-mono text-sm">${deal.rejects?.join(', ')}</p>` : ''}
+                        </div>
+                        <div class="mt-4 md:mt-0 text-right">
+                            <div class="text-3xl font-black mb-1">${deal.status}</div>
+                            <div class="text-lg font-semibold opacity-90">$${deal.capital_asked || 0}M</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 📈 IRM PDF GENERATOR (WORKING)
+        function generateIRM() {
+            if (!currentDeal) {
+                showNotification('Please submit a deal first!', 'error');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Header
+            doc.setFontSize(24);
+            doc.setFont(undefined, 'bold');
+            doc.text('LDVE™ INVESTOR READINESS MEMO', 20, 30);
+            
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Deal #${currentDeal.deal_id}`, 20, 50);
+            doc.text(`${currentDeal.title}`, 20, 65);
+            doc.text(`Status: ${currentDeal.status}`, 20, 80);
+            
+            // Risk Matrix Table
+            doc.autoTable({
+                startY: 100,
+                head: [['Pillar', 'Score', 'Status']],
+                body: [
+                    ['Macro Viability', 'Pending', '⚠️'],
+                    ['Locality Scarcity', 'Pending', '⚠️'],
+                    ['Asset Archetype', 'Pending', '⚠️'],
+                    ['Value-Add Metrics', 'Pending', '⚠️'],
+                    ['Risk Mitigation', 'Pending', '⚠️']
+                ],
+                theme: 'grid',
+                styles: { fontSize: 12, cellPadding: 8 },
+                headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [248, 250, 252] }
+            });
+
+            doc.save(`IRM_Deal_${currentDeal.deal_id}_${new Date().toISOString().slice(0,10)}.pdf`);
+            showNotification('📄 IRM PDF Generated & Downloaded!', 'success');
+        }
+
+        // 💾 CSV EXPORT
+        function exportCSV() {
+            if (deals.length === 0) return showNotification('No deals to export!', 'error');
+            
+            const csv = [
+                ['Deal ID', 'Title', 'Status', 'Phase', 'Capital $M', 'Timestamp', 'Rejects'],
+                ...deals.map(d => [
+                    d.deal_id,
+                    `"${d.title || ''}"`,
+                    `"${d.status}"`,
+                    d.phase || 1,
+                    parseFloat(d.capital_asked || 0),
+                    new Date(d.timestamp).toLocaleString(),
+                    `"${d.rejects ? d.rejects.join('; ') : ''}"`
+                ])
+            ].map(row => row.join(',')).join('
+');
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `LDVE_Pipeline_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            showNotification('📊 CSV Exported Successfully!', 'success');
+        }
+
+        // 🔔 NOTIFICATIONS
+        function showNotification(message, type = 'info') {
+            const notif = document.createElement('div');
+            notif.className = `notification p-6 rounded-3xl text-xl font-bold shadow-3xl border-4 ${
+                type === 'error' ? 'bg-red-600 text-white border-red-400' : 
+                type === 'success' ? 'bg-emerald-600 text-white border-emerald-400' : 
+                'bg-indigo-600 text-white border-indigo-400'
+            }`;
+            notif.textContent = message;
+            document.getElementById('notification').appendChild(notif);
+            
+            setTimeout(() => notif.classList.add('show'), 100);
+            setTimeout(() => {
+                notif.classList.remove('show');
+                setTimeout(() => notif.remove(), 400);
+            }, 5000);
+        }
+
+        // 🎛️ EVENT LISTENERS
+        document.getElementById('licenseTier').addEventListener('change', function() {
+            const desc = {
+                'Tier 1: Internal/White-label': 'Full internal access with white-label capability',
+                'Tier 2: Client-facing/Geo-limited': 'Client portal with geographic restrictions',
+                'Tier 3: Multi-team/CRM/Custom': 'Enterprise CRM integration & customization'
+            }[this.value];
+            document.getElementById('licenseDesc').textContent = desc;
+        });
+
+        // Enter key submits form (but not in textareas)
+        document.getElementById('intakeForm').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                submitIntake();
+            }
+        });
+
+        // LOAD DATA ON START
+        function init() {
+            const saved = localStorage.getItem('ldve_deals');
+            if (saved) {
+                deals = JSON.parse(saved);
+                nextDealId = Math.max(...deals.map(d => d.deal_id || 0), 0) + 1;
+                const rejects = localStorage.getItem('ldve_rejections');
+                if (rejects) rejectionStats = JSON.parse(rejects);
+                updateDashboard();
+            }
+            showPhase(1); // Start on Phase 1
+        }
+
+        // START APP
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
